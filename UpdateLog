@@ -1,5 +1,9 @@
-Stand 15.5.2025
+Stand 15.05.2025
   Features:
         - GUI  
         - Ausgewählte Zellen werden farblich hervorgehoben
         - Zahlen können in die Zellen eingetragen werden
+Stand 18.05.2025
+  Features:
+        - Added Sudoku generator
+        - Added a funktion for later us, for the sudoku solving
