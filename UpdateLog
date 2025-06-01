@@ -7,3 +7,8 @@ Stand 18.05.2025
   Features:
         - Added Sudoku generator
         - Added a funktion for later us, for the sudoku solving
+Stand 01.06.2025
+  Features:
+        - Finished the Sudoku -> fully working 
+        - Added Input via Keyboard
+	      - Added an wrong input counter
