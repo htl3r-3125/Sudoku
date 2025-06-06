@@ -1,5 +1,7 @@
 package at.rennweg.htl.java.gui_ii.sudokuproject;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -8,11 +10,15 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,13 +39,19 @@ public class Sudoku extends Application {
     private int[][] solution;
 
     // Schwierigkeitsgrad
-    private SudokuGame.difficulty difficulty;
+    private static Sudoku.difficulty difficulty;
 
     // Referenz auf das Haupt-Stage für spätere Refferenz
     private Stage primaryStage;
 
     // Zähler für Fehler
     private int fehlerCounter = 0;
+
+    private int seconds;
+
+    Timeline timeline;
+
+    Label timerLable = new Label("Time: 0 min 0 sec");
 
     @Override
     public void start(Stage primaryStage) {
@@ -103,6 +115,25 @@ public class Sudoku extends Application {
         // Erstelle Sudoku-Daten (int[][]) je nach Schwierigkeit und fülle die Buttons
         setSudoku(generateSudoku(difficulty));
 
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+        seconds = 0;
+
+        timerLable.setMinWidth(CELL_SIZE);
+        timerLable.setAlignment(Pos.CENTER);
+        timerLable.setStyle("-fx-font-size: 22px;");
+
+        Timeline timelineUpdateText = new Timeline(
+                new KeyFrame(Duration.seconds(0), e -> {
+                    timerLable.setText(timeDisplayCorrect(seconds));
+                })
+        );
+
+        timelineUpdateText.setCycleCount(Timeline.INDEFINITE);
+        timelineUpdateText.play();
+
+        startTimer();
+
         // Erstelle eine horizontale Box (HBox) für die Zahlentasten 1 bis 9
         HBox numberPanel = new HBox(5);
         numberPanel.setAlignment(Pos.CENTER);
@@ -120,17 +151,45 @@ public class Sudoku extends Application {
             numberPanel.getChildren().add(numBtn);
         }
 
+        outerGrid.setAlignment(Pos.CENTER);
+
         // Hauptlayout: vertikale Box, die zuerst das Sudoku-Board und darunter die Zahlenleiste enthält
         VBox root = new VBox(10);
         root.setAlignment(Pos.CENTER);
-        root.getChildren().addAll(outerGrid, numberPanel);
+        root.setMinWidth(700);
+        root.getChildren().addAll(timerLable, outerGrid, numberPanel);
 
-        // Erstelle Szene und konfiguriere das Stage
         Scene scene = new Scene(root);
         stage.setResizable(false);
         stage.setScene(scene);
         stage.setTitle("Sudokuboard");
         stage.show();
+    }
+
+    public String timeDisplayCorrect (int sec) {
+
+        int minutes = sec / 60;
+        int seconds = sec % 60;
+        return "Time: " + minutes + " min " + seconds + " sec";
+
+    }
+
+    public void startTimer() {
+        timeline = new Timeline(
+                new KeyFrame(Duration.seconds(1), e -> {
+                    seconds++;
+                    timerLable.setText(timeDisplayCorrect(seconds));
+                })
+        );
+
+        timeline.setCycleCount(Timeline.INDEFINITE);
+        timeline.play();
+    }
+
+    public void stopTimer() {
+        if (timeline != null) {
+            timeline.stop();
+        }
     }
 
     private void showDifficultySelection(Stage stage) {
@@ -146,19 +205,19 @@ public class Sudoku extends Application {
 
         // Wenn “Easy” gedrückt wird:
         easyBtn.setOnAction(e -> {
-            difficulty = SudokuGame.difficulty.EASY;
+            difficulty = Sudoku.difficulty.EASY;
             dialog.close();
             launchSudokuBoard(stage);
         });
         // Wenn “Medium” gedrückt wird:
         mediumBtn.setOnAction(e -> {
-            difficulty = SudokuGame.difficulty.MEDIUM;
+            difficulty = Sudoku.difficulty.MEDIUM;
             dialog.close();
             launchSudokuBoard(stage);
         });
         // Wenn “Hard” gedrückt wird:
         hardBtn.setOnAction(e -> {
-            difficulty = SudokuGame.difficulty.HARD;
+            difficulty = Sudoku.difficulty.HARD;
             dialog.close();
             launchSudokuBoard(stage);
         });
@@ -179,7 +238,7 @@ public class Sudoku extends Application {
         dialog.show();
     }
 
-    private int[][] generateSudoku(SudokuGame.difficulty diff) {
+    private int[][] generateSudoku(difficulty diff) {
         // Initialisiere leeres 9x9-Board mit Nullen
         int[][] board = new int[9][9];
         fillBoard(board);
@@ -212,30 +271,32 @@ public class Sudoku extends Application {
             //Spalte
             for (int col = 0; col < 9; col++) {
                 // Wenn Zelle leer -> versuche Zahl einzusetzen
-                if (board[row][col] == 0) {
-                    List<Integer> numbers = new ArrayList<>();
-                    for (int i = 1; i <= 9; i++) {
-                        numbers.add(i);
-                    }
-
-                    Collections.shuffle(numbers);
-
-                    // Probiere jede Zahl in zufälliger Reihenfolge
-                    for (int number : numbers) {
-                        // Prüfe, ob number in row,col gültig ist
-                        if (isValid(board, row, col, number)) {
-                            board[row][col] = number;
-                            // Rekursiver Aufruf
-                            if (fillBoard(board)) {
-                                return true;
-                            }
-                            // Wenns nicht passt -> Zurücksetzen
-                            board[row][col] = 0;
-                        }
-                    }
-                    // Wenn keine Zahl passt -> abbruch
-                    return false;
+                if (board[row][col] != 0) {
+                    continue;
                 }
+                List<Integer> numbers = new ArrayList<>();
+                for (int i = 1; i <= 9; i++) {
+                    numbers.add(i);
+                }
+
+                Collections.shuffle(numbers);
+
+                // Probiere jede Zahl in zufälliger Reihenfolge
+                for (int number : numbers) {
+                    // Prüfe, ob number in row,col gültig ist
+                    if (!isValid(board, row, col, number)) {
+                        continue;
+                    }
+                    board[row][col] = number;
+                    // Rekursiver Aufruf
+                    if (fillBoard(board)) {
+                        return true;
+                    }
+                    // Wenns nicht passt -> Zurücksetzen
+                    board[row][col] = 0;
+                }
+                // Wenn keine Zahl passt -> abbruch
+                return false;
             }
         }
         // Wenn hier dann passt alles
@@ -357,7 +418,9 @@ public class Sudoku extends Application {
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.setTitle("Ergebnis");
 
-        Label gewonnenTxt = new Label("Gewonnen!!!");
+        stopTimer();
+
+        Label time = new Label(timeDisplayCorrect(seconds));
         Label fehlerText = new Label("Fehler: " + fehlerCounter);
         Button schließenBtn = new Button("Schließen?");
         Button erneutBtn = new Button("Nochmal versuchen");
@@ -379,7 +442,7 @@ public class Sudoku extends Application {
         });
 
         // Layout für den Dialog: vertikale Box mit Elementen
-        VBox layout = new VBox(10, gewonnenTxt, fehlerText, schließenBtn, erneutBtn);
+        VBox layout = new VBox(10, time, fehlerText, schließenBtn, erneutBtn);
         layout.setAlignment(Pos.CENTER);
         layout.setPadding(new Insets(20));
         
